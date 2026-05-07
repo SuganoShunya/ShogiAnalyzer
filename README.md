@@ -107,7 +107,7 @@ npm run cap:ios
 - iOS ビルドには macOS + Xcode が必要
 - Android ビルドには Android Studio が必要
 - いまの USI ブリッジは PC 向け機能
-- 将棋ウォーズ取得も開発サーバー依存なので単体版ではオフ
+- 将棋ウォーズ取得はローカル開発時とVercel公開版で利用可能。ネイティブ単体版ではオフ
 
 ## 解析について
 

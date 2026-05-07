@@ -4,7 +4,7 @@ import type { Kind } from 'shogi.js'
 import { analyzePosition, analyzePositionFromSfen } from './engine'
 import type { EngineResult } from './engine'
 import { probeUsi } from './usiProbe'
-import { canUseServerApis, isNativePlatform } from './platform'
+import { canUseServerApis, isHostedWebApp, isNativePlatform } from './platform'
 import type { EngineConfig, EngineProviderId, MobileQuality, ParsedMove, Player } from './types'
 import './App.css'
 
@@ -1016,6 +1016,7 @@ function candidateFromPosition(shogi: Shogi, bestMove: string, evaluation: numbe
 function App() {
   const initialState = readStoredState()
   const nativePlatform = isNativePlatform()
+  const hostedWebApp = isHostedWebApp()
   const serverApisAvailable = canUseServerApis()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [kifuText, setKifuText] = useState(initialState?.kifuText ?? sampleKifu)
@@ -1721,6 +1722,11 @@ function App() {
             <h2>将棋ウォーズ連携</h2>
             <span className="live-pill">BETA</span>
           </div>
+          {hostedWebApp ? (
+            <div className="status-banner ok">
+              公開版では将棋ウォーズ連携をVercel Functions経由で使う。
+            </div>
+          ) : null}
           <label className="field-label">
             将棋ウォーズID
             <input
