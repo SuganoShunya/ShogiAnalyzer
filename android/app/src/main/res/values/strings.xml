@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">将棋解析アプリ</string>
+    <string name="title_activity_main">将棋解析アプリ</string>
+    <string name="package_name">ai.openclaw.shogianalyzer</string>
+    <string name="custom_url_scheme">ai.openclaw.shogianalyzer</string>
+</resources>

@@ -1,0 +1,28 @@
+{
+  "name": "将棋解析アプリ",
+  "short_name": "将棋解析",
+  "description": "棋譜再生、盤面確認、軽量解析ができるAndroid向けPWA将棋アプリ",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+  "background_color": "#efe6d7",
+  "theme_color": "#7b4b17",
+  "lang": "ja",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "productivity", "utilities"]
+}
