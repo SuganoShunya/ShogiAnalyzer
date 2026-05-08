@@ -1,5 +1,5 @@
 import { Shogi } from 'shogi.js'
-import type { EngineConfig, ParsedMove } from './types'
+import type { EngineConfig, EngineLine, ParsedMove } from './types'
 import { canUseServerApis } from './platform'
 
 export type UsiAnalysisResult = {
@@ -8,6 +8,7 @@ export type UsiAnalysisResult = {
   pv?: string[]
   evaluation?: number
   depth?: number
+  lines?: EngineLine[]
   source?: 'usi'
   reason?: string
 }

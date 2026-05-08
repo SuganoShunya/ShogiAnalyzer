@@ -380,6 +380,7 @@ async function runUsiAnalysis(usiPath: string, sfen: string, thinkTimeMs = 1200)
     let latestEval: number | undefined
     let latestDepth: number | undefined
     let latestPv: string[] | undefined
+    const latestLines = new Map<number, { moveUsi: string; evaluation: number; pv: string[]; depth: number }>()
     const transcript: string[] = []
 
     const finish = (result: unknown) => {
@@ -411,6 +412,8 @@ async function runUsiAnalysis(usiPath: string, sfen: string, thinkTimeMs = 1200)
           proc.stdin.write('usinewgame\n')
           transcript.push(`in:position sfen ${sfen}`)
           proc.stdin.write(`position sfen ${sfen}\n`)
+          transcript.push(`in:setoption name MultiPV value 5`)
+          proc.stdin.write('setoption name MultiPV value 5\n')
           transcript.push(`in:go movetime ${thinkTimeMs}`)
           proc.stdin.write(`go movetime ${thinkTimeMs}\n`)
         } else if (line.startsWith('info ')) {
@@ -418,10 +421,21 @@ async function runUsiAnalysis(usiPath: string, sfen: string, thinkTimeMs = 1200)
           const mateMatch = line.match(/score mate (-?\d+)/)
           const depthMatch = line.match(/depth (\d+)/)
           const pvMatch = line.match(/ pv (.+)$/)
+          const multiPvMatch = line.match(/ multipv (\d+)/)
           if (cpMatch) latestEval = Number(cpMatch[1])
           if (mateMatch) latestEval = Number(mateMatch[1]) > 0 ? 30000 : -30000
           if (depthMatch) latestDepth = Number(depthMatch[1])
           if (pvMatch) latestPv = pvMatch[1].trim().split(/\s+/)
+          if (pvMatch && latestPv?.[0]) {
+            const lineEval = mateMatch ? (Number(mateMatch[1]) > 0 ? 30000 : -30000) : cpMatch ? Number(cpMatch[1]) : (latestEval ?? 0)
+            const multiPv = multiPvMatch ? Number(multiPvMatch[1]) : 1
+            latestLines.set(multiPv, {
+              moveUsi: latestPv[0],
+              evaluation: lineEval,
+              pv: latestPv,
+              depth: depthMatch ? Number(depthMatch[1]) : (latestDepth ?? 0),
+            })
+          }
         } else if (line.startsWith('bestmove ')) {
           clearTimeout(timer)
           const bestMove = line.split(/\s+/)[1]
@@ -432,6 +446,10 @@ async function runUsiAnalysis(usiPath: string, sfen: string, thinkTimeMs = 1200)
             pv: latestPv,
             evaluation: latestEval,
             depth: latestDepth,
+            lines: [...latestLines.entries()]
+              .sort((a, b) => a[0] - b[0])
+              .map(([, value]) => value)
+              .filter((value) => value.moveUsi),
             reason: bestMove === 'resign' ? 'engine returned resign' : bestMove === 'win' ? 'engine returned win' : undefined,
             transcript,
           })

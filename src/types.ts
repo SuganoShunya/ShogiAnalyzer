@@ -16,4 +16,11 @@ export type EngineConfig = {
   mobileQuality?: MobileQuality
 }
 
+export type EngineLine = {
+  moveUsi: string
+  evaluation: number
+  pv: string[]
+  depth?: number
+}
+
 export type BoardBuilder = (moves: ParsedMove[], moveIndex: number) => import('shogi.js').Shogi

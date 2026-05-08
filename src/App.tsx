@@ -1253,6 +1253,62 @@ function App() {
   const candidateMoves = useMemo(
     () => {
       if (!positionState.shogi) return []
+
+      if (analysis.lines && analysis.lines.length > 0) {
+        return analysis.lines.map((line, index) => {
+          const parsed = parseUsiMove(line.moveUsi)
+          if (parsed?.drop) {
+            return {
+              rank: index + 1,
+              move: line.move,
+              moveUsi: line.moveUsi,
+              evaluation: line.evaluation,
+              intent: index === 0 ? 'エンジン推奨手' : 'エンジン候補手',
+              to: parsed.to,
+              kind: parsed.kind,
+              drop: true,
+              playable: true,
+              category: 'attack' as const,
+              isCheck: false,
+              captures: null,
+              risky: false,
+              hanging: false,
+            }
+          }
+
+          if (parsed?.from) {
+            const piece = positionState.shogi.get(parsed.from.x, parsed.from.y)
+            return {
+              rank: index + 1,
+              move: line.move,
+              moveUsi: line.moveUsi,
+              evaluation: line.evaluation,
+              intent: index === 0 ? 'エンジン推奨手' : 'エンジン候補手',
+              from: parsed.from,
+              to: parsed.to,
+              kind: piece?.kind,
+              drop: false,
+              playable: !!piece,
+              category: 'attack' as const,
+              isCheck: false,
+              captures: null,
+              risky: false,
+              hanging: false,
+            }
+          }
+
+          return {
+            rank: index + 1,
+            move: line.move,
+            moveUsi: line.moveUsi,
+            evaluation: line.evaluation,
+            intent: index === 0 ? 'エンジン推奨手' : 'エンジン候補手',
+            playable: false,
+            category: 'attack' as const,
+          }
+        })
+      }
+
       const moves = candidateFromPosition(positionState.shogi, analysis.bestMove, analysis.evaluation, analysis.bestMoveUsi)
       return moves.filter((candidate) => {
         if (candidate.to && candidate.kind && candidate.from) {
@@ -1262,7 +1318,7 @@ function App() {
         return true
       })
     },
-    [analysis.bestMove, analysis.bestMoveUsi, analysis.evaluation, positionState.shogi],
+    [analysis.bestMove, analysis.bestMoveUsi, analysis.evaluation, analysis.lines, positionState.shogi],
   )
   const legalTargets = useMemo(() => {
     if (!positionState.shogi) return []

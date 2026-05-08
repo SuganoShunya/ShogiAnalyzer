@@ -1,7 +1,15 @@
 import { Color, Piece, Shogi } from 'shogi.js'
 import type { Kind } from 'shogi.js'
-import type { EngineConfig, ParsedMove } from './types'
+import type { EngineConfig, EngineLine, ParsedMove } from './types'
 import { getEngineProvider, summarizeEvaluation, type EngineSource } from './engineProviders'
+
+export type EngineDisplayLine = {
+  move: string
+  moveUsi: string
+  evaluation: number
+  pv: string[]
+  depth: number
+}
 
 export type EngineResult = {
   source: EngineSource
@@ -10,6 +18,7 @@ export type EngineResult = {
   bestMoveUsi?: string
   pv: string[]
   depth: number
+  lines?: EngineDisplayLine[]
   summary: string
   statusMessage?: string
 }
@@ -140,6 +149,21 @@ function convertUsiPvToJapanese(moves: string[], parsedMoves: ParsedMove[], curr
   return result
 }
 
+function convertEngineLinesToJapanese(lines: EngineLine[] | undefined, parsedMoves: ParsedMove[], currentMoveIndex: number): EngineDisplayLine[] | undefined {
+  if (!lines || lines.length === 0) return undefined
+
+  return lines.map((line) => {
+    const shogi = applyMovesForEngine(parsedMoves, currentMoveIndex)
+    return {
+      move: usiMoveToJapanese(line.moveUsi, shogi),
+      moveUsi: line.moveUsi,
+      evaluation: line.evaluation,
+      pv: convertUsiPvToJapanese(line.pv ?? [], parsedMoves, currentMoveIndex),
+      depth: line.depth ?? 0,
+    }
+  })
+}
+
 function fallbackResult(reason: string | undefined, currentMoveIndex: number): EngineResult {
   const evaluation = 0
   return {
@@ -172,6 +196,7 @@ export async function analyzePosition(
       bestMoveUsi,
       pv: bestMoveUsi ? convertUsiPvToJapanese(result.pv ?? [], moves, currentMoveIndex) : (result.pv ?? []),
       depth: result.depth ?? 0,
+      lines: convertEngineLinesToJapanese(result.lines, moves, currentMoveIndex),
       summary: summarizeEvaluation(evaluation, currentMoveIndex, result.source),
       statusMessage: result.statusMessage,
     }
@@ -222,6 +247,13 @@ export async function analyzePositionFromSfen(
       bestMoveUsi: result.bestMoveUsi,
       pv: [],
       depth: result.depth ?? 0,
+      lines: result.lines?.map((line) => ({
+        move: usiMoveToJapanese(line.moveUsi, shogi),
+        moveUsi: line.moveUsi,
+        evaluation: line.evaluation,
+        pv: [],
+        depth: line.depth ?? 0,
+      })),
       summary: summarizeEvaluation(evaluation, moveCount, result.source),
       statusMessage: result.statusMessage,
     }

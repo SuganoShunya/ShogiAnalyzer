@@ -1,4 +1,4 @@
-import type { EngineConfig, ParsedMove } from './types'
+import type { EngineConfig, EngineLine, ParsedMove } from './types'
 import { analyzeWithUsi, analyzeWithUsiSfen } from './usi'
 import { analyzeSfenWithWorker, analyzeWithWorker, canUseAnalysisWorker } from './workerEngine'
 import { analyzePositionFromSfenWithBrowserEngine, analyzeWithBrowserEngine } from './wasmEngine'
@@ -13,6 +13,7 @@ export type EngineProviderResult = {
   bestMoveUsi?: string
   pv?: string[]
   depth?: number
+  lines?: EngineLine[]
   reason?: string
   statusMessage?: string
 }
@@ -95,6 +96,7 @@ const usiBridgeProvider: EngineProvider = {
       bestMoveUsi: usi.bestMove,
       pv: usi.pv,
       depth: usi.depth,
+      lines: usi.lines,
       reason: usi.reason,
       statusMessage: usi.available ? 'PC側USIエンジンに接続して解析中' : undefined,
     }
@@ -108,6 +110,7 @@ const usiBridgeProvider: EngineProvider = {
       bestMoveUsi: usi.bestMove,
       pv: usi.pv,
       depth: usi.depth,
+      lines: usi.lines,
       reason: usi.reason,
       statusMessage: usi.available ? 'PC側USIエンジンに接続して解析中' : undefined,
     }
