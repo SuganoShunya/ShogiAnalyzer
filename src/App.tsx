@@ -1056,6 +1056,11 @@ function App() {
   const [engineConfig, setEngineConfig] = useState<EngineConfig>(
     initialState?.engineConfig ?? { provider: 'wasm', usiPath: '', thinkTimeMs: 1200, mobileQuality: 'auto' },
   )
+  const isWasmAnalysis = analysis.source === 'wasm'
+  const candidateSectionTitle = isWasmAnalysis ? '参考手' : '候補手'
+  const bestMoveLabel = isWasmAnalysis ? '参考' : 'best'
+  const topCandidateIntent = isWasmAnalysis ? '参考候補' : 'エンジン推奨手'
+  const otherCandidateIntent = isWasmAnalysis ? '参考候補' : 'エンジン候補手'
   const [probeState, setProbeState] = useState<{ loading: boolean; message: string; ok?: boolean }>({
     loading: false,
     message: '未テスト',
@@ -1280,6 +1285,7 @@ function App() {
 
       if (analysis.lines && analysis.lines.length > 0) {
         return analysis.lines.map((line, index) => {
+          const intentLabel = index === 0 ? topCandidateIntent : otherCandidateIntent
           const parsed = parseUsiMove(line.moveUsi)
           if (parsed?.drop) {
             return {
@@ -1287,7 +1293,7 @@ function App() {
               move: line.move,
               moveUsi: line.moveUsi,
               evaluation: line.evaluation,
-              intent: index === 0 ? 'エンジン推奨手' : 'エンジン候補手',
+              intent: intentLabel,
               to: parsed.to,
               kind: parsed.kind,
               drop: true,
@@ -1307,7 +1313,7 @@ function App() {
               move: line.move,
               moveUsi: line.moveUsi,
               evaluation: line.evaluation,
-              intent: index === 0 ? 'エンジン推奨手' : 'エンジン候補手',
+              intent: intentLabel,
               from: parsed.from,
               to: parsed.to,
               kind: piece?.kind,
@@ -1326,7 +1332,7 @@ function App() {
             move: line.move,
             moveUsi: line.moveUsi,
             evaluation: line.evaluation,
-            intent: index === 0 ? 'エンジン推奨手' : 'エンジン候補手',
+            intent: intentLabel,
             playable: false,
             category: 'attack' as const,
           }
@@ -2235,11 +2241,11 @@ function App() {
 
           <div className="card graph-card">
             <div className="section-title-row">
-              <h2>候補手</h2>
+              <h2>{candidateSectionTitle}</h2>
               <span className="muted">
                 {isAnalyzing
                   ? '計算中...'
-                  : `best: ${analysis.bestMove}${analysis.currentIndex !== safeCurrentMoveIndex ? ' (元局面)' : ''}`}
+                  : `${bestMoveLabel}: ${analysis.bestMove}${analysis.currentIndex !== safeCurrentMoveIndex ? ' (元局面)' : ''}`}
                 {analysis.currentIndex !== safeCurrentMoveIndex ? ' (元局面)' : ''}
               </span>
             </div>
