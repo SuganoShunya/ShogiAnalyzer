@@ -130,8 +130,8 @@ const wasmProvider: EngineProvider = {
           statusMessage: `${result.statusMessage ?? 'zshogi による端末内解析'}${canUseAnalysisWorker() ? ' (本格エンジン)' : ''}`,
         }
       }
-    } catch {
-      // fall through
+    } catch (error) {
+      console.error('wasm provider: zshogi failed', error)
     }
 
     if (canUseAnalysisWorker()) {
@@ -141,11 +141,17 @@ const wasmProvider: EngineProvider = {
           ...result,
           statusMessage: result.statusMessage ? `${result.statusMessage} (Worker実行)` : '端末内探索エンジンをWorkerで実行中',
         }
-      } catch {
-        // fall through
+      } catch (error) {
+        console.error('wasm provider: worker failed', error)
       }
     }
-    return analyzeWithBrowserEngine(moves, currentMoveIndex, config)
+
+    try {
+      return await analyzeWithBrowserEngine(moves, currentMoveIndex, config)
+    } catch (error) {
+      console.error('wasm provider: browser engine failed', error)
+      throw error
+    }
   },
   async analyzeSfen(sfen, moveCount, config) {
     if (canUseAnalysisWorker()) {
