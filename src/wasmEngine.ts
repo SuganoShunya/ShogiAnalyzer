@@ -2,6 +2,8 @@ import { Color, Piece, Shogi } from 'shogi.js'
 import type { Kind } from 'shogi.js'
 import type { EngineConfig, EngineLine, ParsedMove } from './types'
 import type { EngineProviderResult } from './engineProviders'
+import { extractMoveFeatures } from './featureExtractor'
+import { scoreMoveFeatures } from './moveRanker'
 
 type MoveCandidate = {
   usi: string
@@ -377,9 +379,10 @@ function analyzeRootLines(shogi: Shogi, depth: number, count: number): EngineLin
     const score = -search(next, Math.max(depth - 1, 0), -Infinity, Infinity)
     const evaluation = shogi.turn === Color.Black ? score : -score
     const penalty = immediateDangerPenalty(shogi, next, move.usi)
+    const learnedBias = scoreMoveFeatures(extractMoveFeatures(shogi, move.usi))
     return {
       moveUsi: move.usi,
-      evaluation: evaluation - penalty,
+      evaluation: evaluation - penalty + learnedBias,
       pv: [move.usi, ...principalVariation(next, Math.max(depth - 1, 0))],
       depth,
     }
