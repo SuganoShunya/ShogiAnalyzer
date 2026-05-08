@@ -246,15 +246,36 @@ function applyUsiMove(shogi: Shogi, usi: string) {
 }
 
 function search(shogi: Shogi, depth: number, alpha: number, beta: number): number {
+  const standPat = shogi.turn === Color.Black ? evaluateBoard(shogi) : -evaluateBoard(shogi)
+
   if (depth === 0) {
-    const evalScore = evaluateBoard(shogi)
-    return shogi.turn === Color.Black ? evalScore : -evalScore
+    const tacticalMoves = generateMoves(shogi)
+      .filter((move) => {
+        const parsed = move.usi.match(/^([1-9])([a-i])([1-9])([a-i])(\+)?$/)
+        if (!parsed) return false
+        return !!shogi.get(Number(parsed[3]), RANKS.indexOf(parsed[4]) + 1)
+      })
+      .slice(0, 8)
+
+    if (tacticalMoves.length === 0) return standPat
+
+    let bestQ = standPat
+    let localAlpha = Math.max(alpha, standPat)
+    for (const move of tacticalMoves) {
+      const next = cloneShogi(shogi)
+      applyUsiMove(next, move.usi)
+      const score = -search(next, 0, -beta, -localAlpha)
+      if (score > bestQ) bestQ = score
+      if (bestQ > localAlpha) localAlpha = bestQ
+      if (localAlpha >= beta) break
+    }
+
+    return bestQ
   }
 
   const moves = generateMoves(shogi).slice(0, depth >= 3 ? 18 : 28)
   if (moves.length === 0) {
-    const evalScore = evaluateBoard(shogi)
-    return shogi.turn === Color.Black ? evalScore : -evalScore
+    return standPat
   }
 
   let best = -Infinity
