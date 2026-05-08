@@ -8,21 +8,6 @@ import { canUseServerApis, isHostedWebApp, isNativePlatform } from './platform'
 import type { EngineConfig, EngineProviderId, MobileQuality, ParsedMove, Player } from './types'
 import './App.css'
 
-const candidateMoves = useMemo(
-  () => {
-    if (!positionState.shogi) return []
-
-    console.log('engine debug', {
-      source: analysis.source,
-      bestMove: analysis.bestMove,
-      bestMoveUsi: analysis.bestMoveUsi,
-      lines: analysis.lines,
-      lineCount: analysis.lines?.length ?? 0,
-    })
-
-    if (analysis.lines && analysis.lines.length > 0) {
-      return analysis.lines.map((line, index) => {
-
 type Candidate = {
   rank: number
   move: string
@@ -1268,6 +1253,14 @@ function App() {
   const candidateMoves = useMemo(
     () => {
       if (!positionState.shogi) return []
+
+      console.log('engine debug', {
+        source: analysis.source,
+        bestMove: analysis.bestMove,
+        bestMoveUsi: analysis.bestMoveUsi,
+        lines: analysis.lines,
+        lineCount: analysis.lines?.length ?? 0,
+      })
 
       if (analysis.lines && analysis.lines.length > 0) {
         return analysis.lines.map((line, index) => {
