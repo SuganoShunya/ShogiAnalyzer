@@ -136,24 +136,37 @@ function edgeDropPenalty(kind: Kind, toX: number, toY: number) {
 
 function bishopLanePressure(shogi: Shogi, toX: number, toY: number, color: Color) {
   const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+  const opponent = color === Color.Black ? Color.White : Color.Black
+  const enemyKing = findKing(shogi, opponent)
   let score = 0
 
   for (const [dx, dy] of directions) {
     let x = toX + dx
     let y = toY + dy
+    let distance = 1
     while (x >= 1 && x <= 9 && y >= 1 && y <= 9) {
       const piece = shogi.get(x, y)
       if (piece) {
-        if (piece.color !== color) score += piece.kind === 'OU' ? 220 : pieceScore(piece.kind) * 0.18
+        if (piece.color !== color) {
+          score += piece.kind === 'OU' ? 220 : pieceScore(piece.kind) * 0.18
+          if (piece.kind === 'OU') score += Math.max(0, 80 - distance * 12)
+          if (piece.kind === 'HI' || piece.kind === 'KA' || piece.kind === 'KI' || piece.kind === 'GI') score += Math.max(0, 40 - distance * 6)
+        }
         break
       }
       score += 3
+      if (enemyKing) {
+        const kingDistance = Math.abs(enemyKing.x - x) + Math.abs(enemyKing.y - y)
+        if (kingDistance <= 2) score += 18 - kingDistance * 5
+      }
       x += dx
       y += dy
+      distance += 1
     }
   }
 
-  return score
+  const centerBonus = 18 - (Math.abs(5 - toX) * 4 + Math.abs(5 - toY) * 3)
+  return score + Math.max(centerBonus, -8)
 }
 
 function generateMoves(shogi: Shogi): MoveCandidate[] {
