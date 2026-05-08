@@ -172,8 +172,9 @@ export function extractMoveFeatures(before: Shogi, usi: string): MoveFeatures {
   const canBeTaken = !!movedPiece && movedPiece.kind !== 'OU' && canCaptureSquare(after, parsed.to, opponent)
   const defended = canCaptureSquare(after, parsed.to, mover)
   const hangPenalty = canBeTaken ? pieceScore(movedPiece!.kind) * (defended ? 1.2 : 2.4) : 0
-  const promotionGain = !parsed.drop && parsed.from
-    ? Math.max(0, pieceScore(Piece.promote(before.get(parsed.from.x, parsed.from.y)?.kind ?? 'FU')) - pieceScore(before.get(parsed.from.x, parsed.from.y)?.kind ?? 'FU'))
+  const sourcePiece = !parsed.drop && parsed.from ? before.get(parsed.from.x, parsed.from.y) : null
+  const promotionGain = sourcePiece && Piece.canPromote(sourcePiece.kind)
+    ? Math.max(0, pieceScore(Piece.promote(sourcePiece.kind)) - pieceScore(sourcePiece.kind))
     : 0
   const enemyKing = findKing(after, opponent)
   const ownKing = findKing(after, mover)
