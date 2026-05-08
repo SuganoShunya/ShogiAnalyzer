@@ -117,9 +117,24 @@ export async function analyzeWithZshogi(moves: ParsedMove[], currentMoveIndex: n
 
   if ((result.lines?.length ?? 0) <= 1) {
     const browserResult = await analyzeWithBrowserEngine(moves, currentMoveIndex, config)
+    const supplemental = browserResult.lines ?? []
+    const primaryLine = result.bestMoveUsi
+      ? {
+          moveUsi: result.bestMoveUsi,
+          evaluation: result.evaluation ?? (supplemental[0]?.evaluation ?? 0),
+          pv: result.pv?.length ? result.pv : (supplemental.find((line) => line.moveUsi === result.bestMoveUsi)?.pv ?? supplemental[0]?.pv ?? []),
+          depth: result.depth ?? 0,
+        }
+      : supplemental[0]
+
+    const mergedLines = [
+      ...(primaryLine ? [primaryLine] : []),
+      ...supplemental.filter((line) => line.moveUsi !== primaryLine?.moveUsi),
+    ].slice(0, 5)
+
     return {
       ...result,
-      lines: browserResult.lines,
+      lines: mergedLines,
       pv: result.pv?.length ? result.pv : browserResult.pv,
       statusMessage: 'zshogi による端末内解析 (候補手は補助探索で補完)',
     }
