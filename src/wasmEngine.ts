@@ -134,6 +134,28 @@ function edgeDropPenalty(kind: Kind, toX: number, toY: number) {
   return 0
 }
 
+function bishopLanePressure(shogi: Shogi, toX: number, toY: number, color: Color) {
+  const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+  let score = 0
+
+  for (const [dx, dy] of directions) {
+    let x = toX + dx
+    let y = toY + dy
+    while (x >= 1 && x <= 9 && y >= 1 && y <= 9) {
+      const piece = shogi.get(x, y)
+      if (piece) {
+        if (piece.color !== color) score += piece.kind === 'OU' ? 220 : pieceScore(piece.kind) * 0.18
+        break
+      }
+      score += 3
+      x += dx
+      y += dy
+    }
+  }
+
+  return score
+}
+
 function generateMoves(shogi: Shogi): MoveCandidate[] {
   const color = shogi.turn
   const moves: MoveCandidate[] = []
@@ -178,7 +200,12 @@ function generateMoves(shogi: Shogi): MoveCandidate[] {
       : 0
     const quietAttackPenalty = ownDanger >= 7 ? 120 : ownDanger >= 4 ? 45 : 0
     const expensiveDropPenalty = drop.kind === 'KA' || drop.kind === 'HI' ? 140 : drop.kind === 'GI' || drop.kind === 'KI' ? 30 : 0
-    moves.push({ usi: dropToUsi(drop.kind as Kind, drop.to.x, drop.to.y), score: aroundCenter + defensiveBonus - edgePenalty - quietAttackPenalty - expensiveDropPenalty })
+    const tacticalDropBonus = drop.kind === 'KA'
+      ? bishopLanePressure(shogi, drop.to.x, drop.to.y, color)
+      : drop.kind === 'HI'
+        ? 18 - Math.abs(5 - drop.to.x) * 4
+        : 0
+    moves.push({ usi: dropToUsi(drop.kind as Kind, drop.to.x, drop.to.y), score: aroundCenter + defensiveBonus + tacticalDropBonus - edgePenalty - quietAttackPenalty - expensiveDropPenalty })
   }
 
   return moves.sort((a, b) => b.score - a.score)
