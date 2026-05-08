@@ -143,7 +143,9 @@ function applyUsiMove(shogi: Shogi, usi: string) {
   const parsed = parseMove(usi)
   if (!parsed) throw new Error(`invalid usi move: ${usi}`)
   if (parsed.drop) {
-    shogi.drop(parsed.to.x, parsed.to.y, parsed.kind, shogi.turn)
+    const kind = parsed.kind
+    if (!kind) throw new Error(`missing drop kind: ${usi}`)
+    shogi.drop(parsed.to.x, parsed.to.y, kind, shogi.turn)
     return
   }
   const from = parsed.from
