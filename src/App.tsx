@@ -1597,6 +1597,10 @@ function App() {
     commitSandboxMove(action.from, action.to, 'pv')
   }
 
+  async function handlePvMoveClick(notation: string) {
+    await handlePreviewPvMove(notation)
+  }
+
   function handleCandidateClick(candidate: Candidate) {
     if (!positionState.shogi) return
 
@@ -2237,6 +2241,23 @@ function App() {
                       {candidate.hanging ? <span className="candidate-flag risk">駒損</span> : null}
                       {candidate.playable === false ? <span className="candidate-flag risk">反映不可</span> : null}
                     </div>
+                    {'pv' in candidate && Array.isArray(candidate.pv) && candidate.pv.length > 0 ? (
+                      <div className="pv-line">
+                        {candidate.pv.map((move, index) => (
+                          <button
+                            key={`${candidate.rank}-${move}-${index}`}
+                            type="button"
+                            className="pv-chip"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handlePvMoveClick(move)
+                            }}
+                          >
+                            {index + 1}. {move}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="candidate-score">
                     {candidate.evaluation > 0 ? '+' : ''}{candidate.evaluation}
