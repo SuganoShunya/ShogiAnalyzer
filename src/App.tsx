@@ -1179,6 +1179,21 @@ function App() {
           tone: 'neutral',
         },
         {
+          label: 'debug source',
+          value: analysis.source,
+          tone: analysis.source === 'mock' ? 'warning' : 'positive',
+        },
+        {
+          label: 'debug lines',
+          value: `${analysis.lines?.length ?? 0}`,
+          tone: (analysis.lines?.length ?? 0) > 0 ? 'positive' : 'warning',
+        },
+        {
+          label: 'debug status',
+          value: analysis.statusMessage ?? 'none',
+          tone: analysis.statusMessage ? 'neutral' : 'warning',
+        },
+        {
           label: '現在手数',
           value: sandboxSfen
             ? `${safeCurrentMoveIndex + sandboxMoveCount} / ${parsedMoves.length} + 操作中`
