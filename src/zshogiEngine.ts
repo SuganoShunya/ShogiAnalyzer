@@ -1,5 +1,5 @@
 import type { EngineProviderResult } from './engineProviders'
-import type { EngineConfig, ParsedMove } from './types'
+import type { EngineConfig, EngineLine, ParsedMove } from './types'
 
 let enginePromise: Promise<{ run: (command: string) => string }> | null = null
 
@@ -59,14 +59,31 @@ function toUsiCommand(moves: ParsedMove[], currentMoveIndex: number) {
 }
 
 function parseGoResult(output: string): EngineProviderResult {
-  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-  const bestmoveLine = [...lines].reverse().find((line) => line.startsWith('bestmove '))
-  const infoLine = [...lines].reverse().find((line) => line.startsWith('info '))
+  const rawLines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const bestmoveLine = [...rawLines].reverse().find((line) => line.startsWith('bestmove '))
+  const infoLine = [...rawLines].reverse().find((line) => line.startsWith('info '))
 
   const bestMoveUsi = bestmoveLine?.split(/\s+/)[1]
   const depthMatch = infoLine?.match(/depth\s+(\d+)/)
   const cpMatch = infoLine?.match(/score cp\s+(-?\d+)/)
   const pvMatch = infoLine?.match(/ pv (.+)$/)
+
+  const parsedLines: EngineLine[] = rawLines
+    .filter((line) => line.startsWith('info ') && line.includes(' pv '))
+    .map((line) => {
+      const cp = line.match(/score cp\s+(-?\d+)/)
+      const depth = line.match(/depth\s+(\d+)/)
+      const pv = line.match(/ pv (.+)$/)
+      const pvMoves = pv ? pv[1].trim().split(/\s+/) : []
+      return {
+        moveUsi: pvMoves[0] ?? '',
+        evaluation: cp ? Number(cp[1]) : 0,
+        pv: pvMoves,
+        depth: depth ? Number(depth[1]) : 0,
+      }
+    })
+    .filter((line) => line.moveUsi)
+    .slice(0, 5)
 
   return {
     source: 'wasm',
@@ -75,6 +92,7 @@ function parseGoResult(output: string): EngineProviderResult {
     evaluation: cpMatch ? Number(cpMatch[1]) : 0,
     depth: depthMatch ? Number(depthMatch[1]) : 0,
     pv: pvMatch ? pvMatch[1].trim().split(/\s+/) : [],
+    lines: parsedLines.length > 0 ? parsedLines : undefined,
     statusMessage: 'zshogi による端末内解析',
   }
 }

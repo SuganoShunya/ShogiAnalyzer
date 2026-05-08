@@ -1,6 +1,6 @@
 import { Color, Piece, Shogi } from 'shogi.js'
 import type { Kind } from 'shogi.js'
-import type { EngineConfig, ParsedMove } from './types'
+import type { EngineConfig, EngineLine, ParsedMove } from './types'
 import type { EngineProviderResult } from './engineProviders'
 
 type MoveCandidate = {
@@ -224,6 +224,26 @@ function principalVariation(shogi: Shogi, depth: number) {
   return pv
 }
 
+function analyzeRootLines(shogi: Shogi, depth: number, count: number): EngineLine[] {
+  const rootMoves = generateMoves(shogi).slice(0, depth >= 3 ? 18 : 24)
+  const scored = rootMoves.map((move) => {
+    const next = cloneShogi(shogi)
+    applyUsiMove(next, move.usi)
+    const score = -search(next, Math.max(depth - 1, 0), -Infinity, Infinity)
+    const evaluation = shogi.turn === Color.Black ? score : -score
+    return {
+      moveUsi: move.usi,
+      evaluation,
+      pv: [move.usi, ...principalVariation(next, Math.max(depth - 1, 0))],
+      depth,
+    }
+  })
+
+  return scored
+    .sort((a, b) => b.evaluation - a.evaluation)
+    .slice(0, count)
+}
+
 export async function analyzeWithBrowserEngine(moves: ParsedMove[], currentMoveIndex: number, config?: EngineConfig): Promise<EngineProviderResult> {
   const shogi = boardBuilder()(moves, currentMoveIndex)
   return analyzeShogiPosition(shogi, config)
@@ -251,28 +271,17 @@ async function analyzeShogiPosition(shogi: Shogi, config?: EngineConfig): Promis
     }
   }
 
-  let bestMove = rootMoves[0].usi
-  let bestScore = -Infinity
-  for (const move of rootMoves) {
-    const next = cloneShogi(shogi)
-    applyUsiMove(next, move.usi)
-    const score = -search(next, Math.max(depth - 1, 0), -Infinity, Infinity)
-    if (score > bestScore) {
-      bestScore = score
-      bestMove = move.usi
-    }
-  }
-
-  const scoreFromBlack = shogi.turn === Color.Black ? bestScore : -bestScore
-  const pv = principalVariation(shogi, depth)
+  const lines = analyzeRootLines(shogi, depth, 5)
+  const bestLine = lines[0]
 
   return {
     source: 'wasm',
     available: true,
-    evaluation: scoreFromBlack,
-    bestMoveUsi: bestMove,
-    pv,
+    evaluation: bestLine?.evaluation ?? 0,
+    bestMoveUsi: bestLine?.moveUsi,
+    pv: bestLine?.pv ?? [],
     depth,
+    lines,
     statusMessage: `端末内探索エンジンで深さ ${depth} を読んだ。`,
   }
 }
