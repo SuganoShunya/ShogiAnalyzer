@@ -146,7 +146,9 @@ function applyUsiMove(shogi: Shogi, usi: string) {
     shogi.drop(parsed.to.x, parsed.to.y, parsed.kind, shogi.turn)
     return
   }
-  shogi.move(parsed.from.x, parsed.from.y, parsed.to.x, parsed.to.y, parsed.promote)
+  const from = parsed.from
+  if (!from) throw new Error(`missing move source: ${usi}`)
+  shogi.move(from.x, from.y, parsed.to.x, parsed.to.y, parsed.promote)
 }
 
 export function extractMoveFeatures(before: Shogi, usi: string): MoveFeatures {
@@ -172,7 +174,8 @@ export function extractMoveFeatures(before: Shogi, usi: string): MoveFeatures {
   const canBeTaken = !!movedPiece && movedPiece.kind !== 'OU' && canCaptureSquare(after, parsed.to, opponent)
   const defended = canCaptureSquare(after, parsed.to, mover)
   const hangPenalty = canBeTaken ? pieceScore(movedPiece!.kind) * (defended ? 1.2 : 2.4) : 0
-  const sourcePiece = !parsed.drop && parsed.from ? before.get(parsed.from.x, parsed.from.y) : null
+  const sourceFrom = !parsed.drop ? parsed.from : undefined
+  const sourcePiece = sourceFrom ? before.get(sourceFrom.x, sourceFrom.y) : null
   const promotionGain = sourcePiece && Piece.canPromote(sourcePiece.kind)
     ? Math.max(0, pieceScore(Piece.promote(sourcePiece.kind)) - pieceScore(sourcePiece.kind))
     : 0
