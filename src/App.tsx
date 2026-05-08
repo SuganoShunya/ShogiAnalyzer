@@ -1260,6 +1260,7 @@ function App() {
         bestMoveUsi: analysis.bestMoveUsi,
         lines: analysis.lines,
         lineCount: analysis.lines?.length ?? 0,
+        statusMessage: analysis.statusMessage,
       })
 
       if (analysis.lines && analysis.lines.length > 0) {
