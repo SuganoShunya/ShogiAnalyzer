@@ -177,7 +177,8 @@ function generateMoves(shogi: Shogi): MoveCandidate[] {
       ? Math.max(0, 16 - Math.abs(5 - drop.to.x) * 3 - Math.abs((color === Color.Black ? 8 : 2) - drop.to.y) * 2)
       : 0
     const quietAttackPenalty = ownDanger >= 7 ? 120 : ownDanger >= 4 ? 45 : 0
-    moves.push({ usi: dropToUsi(drop.kind as Kind, drop.to.x, drop.to.y), score: aroundCenter + defensiveBonus - edgePenalty - quietAttackPenalty })
+    const expensiveDropPenalty = drop.kind === 'KA' || drop.kind === 'HI' ? 140 : drop.kind === 'GI' || drop.kind === 'KI' ? 30 : 0
+    moves.push({ usi: dropToUsi(drop.kind as Kind, drop.to.x, drop.to.y), score: aroundCenter + defensiveBonus - edgePenalty - quietAttackPenalty - expensiveDropPenalty })
   }
 
   return moves.sort((a, b) => b.score - a.score)
@@ -277,7 +278,24 @@ function immediateDangerPenalty(before: Shogi, after: Shogi, moveUsi: string) {
   if (to) {
     const movedPiece = after.get(to.x, to.y)
     if (movedPiece && movedPiece.kind !== 'OU' && canCaptureSquare(after, to, opponent)) {
-      penalty += pieceScore(movedPiece.kind) * 1.2
+      const base = pieceScore(movedPiece.kind)
+      const heavyPiecePenalty = movedPiece.kind === 'KA' || movedPiece.kind === 'HI' || movedPiece.kind === 'UM' || movedPiece.kind === 'RY'
+        ? base * 2.6
+        : base * 1.2
+      penalty += heavyPiecePenalty
+
+      const defendedByMover = canCaptureSquare(after, to, mover)
+      if (!defendedByMover) {
+        penalty += movedPiece.kind === 'KA' || movedPiece.kind === 'HI' || movedPiece.kind === 'UM' || movedPiece.kind === 'RY'
+          ? base * 1.4
+          : base * 0.8
+      }
+
+      if (dropMatch) {
+        penalty += movedPiece.kind === 'KA' || movedPiece.kind === 'HI'
+          ? base * 1.8
+          : base * 0.6
+      }
     }
   }
 
