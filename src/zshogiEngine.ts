@@ -1,3 +1,4 @@
+import { analyzeWithBrowserEngine } from './wasmEngine'
 import type { EngineProviderResult } from './engineProviders'
 import type { EngineConfig, EngineLine, ParsedMove } from './types'
 
@@ -112,5 +113,17 @@ export async function analyzeWithZshogi(moves: ParsedMove[], currentMoveIndex: n
   engine.run('isready')
   engine.run('usinewgame')
   engine.run(toUsiCommand(moves, currentMoveIndex))
-  return parseGoResult(engine.run('go'))
+  const result = parseGoResult(engine.run('go'))
+
+  if ((result.lines?.length ?? 0) <= 1) {
+    const browserResult = await analyzeWithBrowserEngine(moves, currentMoveIndex, config)
+    return {
+      ...result,
+      lines: browserResult.lines,
+      pv: result.pv?.length ? result.pv : browserResult.pv,
+      statusMessage: 'zshogi による端末内解析 (候補手は補助探索で補完)',
+    }
+  }
+
+  return result
 }
