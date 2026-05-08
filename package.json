@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "dataset": "node --experimental-strip-types training/buildDataset.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
