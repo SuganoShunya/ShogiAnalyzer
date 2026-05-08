@@ -105,9 +105,39 @@ function mandatoryPromotion(kind: Kind, toY: number, color: Color) {
   return (kind === 'FU' || kind === 'KY') ? toY === 9 : kind === 'KE' ? toY >= 8 : false
 }
 
+function kingDangerLevel(shogi: Shogi, color: Color) {
+  const king = findKing(shogi, color)
+  if (!king) return 0
+
+  const opponent = color === Color.Black ? Color.White : Color.Black
+  let pressure = 0
+
+  for (let dx = -1; dx <= 1; dx += 1) {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      const x = king.x + dx
+      const y = king.y + dy
+      if (x < 1 || x > 9 || y < 1 || y > 9) continue
+      if (canCaptureSquare(shogi, { x, y }, opponent)) pressure += dx === 0 && dy === 0 ? 5 : 2
+    }
+  }
+
+  return pressure
+}
+
+function edgeDropPenalty(kind: Kind, toX: number, toY: number) {
+  const edgeDistance = Math.min(toX - 1, 9 - toX)
+  const deepEdge = toY <= 2 || toY >= 8
+
+  if (kind === 'KY') return edgeDistance === 0 ? (deepEdge ? 260 : 180) : edgeDistance === 1 ? 80 : 0
+  if (kind === 'KE') return edgeDistance === 0 ? 220 : edgeDistance === 1 ? 100 : 0
+  if (kind === 'FU') return edgeDistance === 0 && deepEdge ? 70 : 0
+  return 0
+}
+
 function generateMoves(shogi: Shogi): MoveCandidate[] {
   const color = shogi.turn
   const moves: MoveCandidate[] = []
+  const ownDanger = kingDangerLevel(shogi, color)
 
   for (let x = 1; x <= 9; x += 1) {
     for (let y = 1; y <= 9; y += 1) {
@@ -120,15 +150,20 @@ function generateMoves(shogi: Shogi): MoveCandidate[] {
         const mustPromote = mandatoryPromotion(piece.kind, move.to.y, color)
         const promotedKind = Piece.promote(piece.kind)
         const tactical = (capture ? pieceScore(capture.kind) * 0.8 : 0) + (promoteAllowed ? Math.max(pieceScore(promotedKind) - pieceScore(piece.kind), 0) * 0.35 : 0)
+        const king = piece.kind === 'OU'
+        const defensiveBonus = ownDanger > 0 && !capture
+          ? Math.max(0, 18 - Math.abs(5 - move.to.x) * 3 - Math.abs((color === Color.Black ? 8 : 2) - move.to.y) * 2)
+          : 0
+        const quietAttackPenalty = ownDanger >= 7 && !king && !capture ? 120 : ownDanger >= 4 && !king && !capture ? 40 : 0
 
         if (mustPromote) {
-          moves.push({ usi: moveToUsi(x, y, move.to.x, move.to.y, true), score: tactical + 12 })
+          moves.push({ usi: moveToUsi(x, y, move.to.x, move.to.y, true), score: tactical + defensiveBonus + 12 - quietAttackPenalty })
           continue
         }
 
-        moves.push({ usi: moveToUsi(x, y, move.to.x, move.to.y, false), score: tactical })
+        moves.push({ usi: moveToUsi(x, y, move.to.x, move.to.y, false), score: tactical + defensiveBonus - quietAttackPenalty })
         if (promoteAllowed) {
-          moves.push({ usi: moveToUsi(x, y, move.to.x, move.to.y, true), score: tactical + 10 })
+          moves.push({ usi: moveToUsi(x, y, move.to.x, move.to.y, true), score: tactical + defensiveBonus + 10 - quietAttackPenalty })
         }
       }
     }
@@ -137,7 +172,12 @@ function generateMoves(shogi: Shogi): MoveCandidate[] {
   for (const drop of shogi.getDropsBy(color)) {
     if (!drop.kind) continue
     const aroundCenter = 10 - (Math.abs(5 - drop.to.x) + Math.abs(5 - drop.to.y))
-    moves.push({ usi: dropToUsi(drop.kind as Kind, drop.to.x, drop.to.y), score: aroundCenter })
+    const edgePenalty = edgeDropPenalty(drop.kind as Kind, drop.to.x, drop.to.y)
+    const defensiveBonus = ownDanger > 0
+      ? Math.max(0, 16 - Math.abs(5 - drop.to.x) * 3 - Math.abs((color === Color.Black ? 8 : 2) - drop.to.y) * 2)
+      : 0
+    const quietAttackPenalty = ownDanger >= 7 ? 120 : ownDanger >= 4 ? 45 : 0
+    moves.push({ usi: dropToUsi(drop.kind as Kind, drop.to.x, drop.to.y), score: aroundCenter + defensiveBonus - edgePenalty - quietAttackPenalty })
   }
 
   return moves.sort((a, b) => b.score - a.score)
