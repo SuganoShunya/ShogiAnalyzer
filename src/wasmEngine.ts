@@ -197,6 +197,53 @@ function chooseDepth(config?: EngineConfig) {
   return 1
 }
 
+function findKing(shogi: Shogi, color: Color) {
+  for (let x = 1; x <= 9; x += 1) {
+    for (let y = 1; y <= 9; y += 1) {
+      const piece = shogi.get(x, y)
+      if (piece?.color === color && piece.kind === 'OU') return { x, y }
+    }
+  }
+  return null
+}
+
+function canCaptureSquare(shogi: Shogi, target: { x: number; y: number }, attacker: Color) {
+  for (let x = 1; x <= 9; x += 1) {
+    for (let y = 1; y <= 9; y += 1) {
+      const piece = shogi.get(x, y)
+      if (!piece || piece.color !== attacker) continue
+      if (shogi.getMovesFrom(x, y).some((move) => move.to.x === target.x && move.to.y === target.y)) return true
+    }
+  }
+  return false
+}
+
+function immediateDangerPenalty(before: Shogi, after: Shogi, moveUsi: string) {
+  const mover = before.turn
+  const opponent = mover === Color.Black ? Color.White : Color.Black
+  const ownKing = findKing(after, mover)
+  let penalty = 0
+
+  if (ownKing && canCaptureSquare(after, ownKing, opponent)) penalty += 5000
+
+  const moveMatch = moveUsi.match(/^([1-9])([a-i])([1-9])([a-i])(\+)?$/)
+  const dropMatch = moveUsi.match(/^([PLNSGBR])\*([1-9])([a-i])$/)
+  const to = moveMatch
+    ? { x: Number(moveMatch[3]), y: RANKS.indexOf(moveMatch[4]) + 1 }
+    : dropMatch
+      ? { x: Number(dropMatch[2]), y: RANKS.indexOf(dropMatch[3]) + 1 }
+      : null
+
+  if (to) {
+    const movedPiece = after.get(to.x, to.y)
+    if (movedPiece && movedPiece.kind !== 'OU' && canCaptureSquare(after, to, opponent)) {
+      penalty += pieceScore(movedPiece.kind) * 1.2
+    }
+  }
+
+  return penalty
+}
+
 function principalVariation(shogi: Shogi, depth: number) {
   const pv: string[] = []
   let current = cloneShogi(shogi)
@@ -231,9 +278,10 @@ function analyzeRootLines(shogi: Shogi, depth: number, count: number): EngineLin
     applyUsiMove(next, move.usi)
     const score = -search(next, Math.max(depth - 1, 0), -Infinity, Infinity)
     const evaluation = shogi.turn === Color.Black ? score : -score
+    const penalty = immediateDangerPenalty(shogi, next, move.usi)
     return {
       moveUsi: move.usi,
-      evaluation,
+      evaluation: evaluation - penalty,
       pv: [move.usi, ...principalVariation(next, Math.max(depth - 1, 0))],
       depth,
     }
